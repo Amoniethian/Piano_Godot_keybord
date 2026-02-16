@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bfloat1ng_char"]
+
+[ext_resource type="Script" path="res://scripts/floating_character.gd" id="1_float_char"]
+
+[node name="FloatingCharacter" type="Label"]
+offset_right = 60.0
+offset_bottom = 70.0
+script = ExtResource("1_float_char")
