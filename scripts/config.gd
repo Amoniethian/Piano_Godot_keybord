@@ -60,12 +60,25 @@ const BLACK_KEY_AFTER_WHITE: Dictionary = {
 
 # --- Audio file paths ---
 const NOTE_AUDIO_DIR: String = "res://audio/notes/"
-const ERROR_SFX_PATH: String = "res://audio/sfx/error.wav"
+const ERROR_SFX_DIR: String = "res://audio/sfx/"
+const SUPPORTED_AUDIO_EXTENSIONS: Array[String] = [".wav", ".ogg"]
 
 func get_note_audio_path(key_id: int) -> String:
 	var padded_id := str(key_id + 1).pad_zeros(2)
 	var safe_name := NOTE_NAMES[key_id].replace("#", "s")
-	return NOTE_AUDIO_DIR + "note_" + padded_id + "_" + safe_name + ".wav"
+	var base := NOTE_AUDIO_DIR + "note_" + padded_id + "_" + safe_name
+	return _find_audio_file(base)
+
+func get_error_sfx_path() -> String:
+	return _find_audio_file(ERROR_SFX_DIR + "error")
+
+func _find_audio_file(base_path: String) -> String:
+	for ext in SUPPORTED_AUDIO_EXTENSIONS:
+		var path := base_path + ext
+		if ResourceLoader.exists(path):
+			return path
+	# Fallback: return .wav path so caller can handle missing file
+	return base_path + ".wav"
 
 # --- Sequence Detection Config ---
 const SEQUENCE_LENGTH: int = 6

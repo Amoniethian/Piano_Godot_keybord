@@ -20,8 +20,9 @@ func _ready() -> void:
 	sequence_detector.sequence_result.connect(_on_sequence_result)
 
 	# Load error sound
-	if ResourceLoader.exists(Config.ERROR_SFX_PATH):
-		error_sfx.stream = load(Config.ERROR_SFX_PATH)
+	var error_path := Config.get_error_sfx_path()
+	if ResourceLoader.exists(error_path):
+		error_sfx.stream = load(error_path)
 
 
 func _create_piano_keys() -> void:
