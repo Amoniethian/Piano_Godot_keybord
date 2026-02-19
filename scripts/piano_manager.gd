@@ -83,6 +83,11 @@ func _input(event: InputEvent) -> void:
 
 
 func _handle_midi(event: InputEventMIDI) -> void:
+	print("MIDI: note=%d message=%d velocity=%d -> key_id=%d" % [
+		event.pitch, event.message, event.velocity,
+		Config.midi_to_key_id(event.pitch)
+	])
+
 	if not Config.is_valid_midi_note(event.pitch):
 		return
 

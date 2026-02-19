@@ -44,12 +44,12 @@ func _ready() -> void:
 		key_label.add_theme_color_override("font_color", Color(0.3, 0.3, 0.3))
 		key_label.add_theme_font_size_override("font_size", 12)
 
-	# Load audio file
+	# Load audio file, or generate tone if no file exists
 	var audio_path := Config.get_note_audio_path(key_id)
 	if ResourceLoader.exists(audio_path):
 		note_player.stream = load(audio_path)
 	else:
-		push_warning("Audio file not found for key %d: %s" % [key_id, audio_path])
+		note_player.stream = Config.generate_note_tone(key_id)
 
 
 func press() -> void:
