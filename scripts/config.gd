@@ -97,8 +97,8 @@ const PASSWORD_IMAGE_DIR: String = "res://images/password/"
 func get_password_image_path(step: int) -> String:
 	var padded := str(step + 1).pad_zeros(2)
 	var base := PASSWORD_IMAGE_DIR + "password_" + padded
-	for ext in [".png", ".jpg", ".webp"]:
-		var path := base + ext
+	for ext: String in [".png", ".jpg", ".webp"]:
+		var path: String = base + ext
 		if ResourceLoader.exists(path):
 			return path
 	return base + ".png"
