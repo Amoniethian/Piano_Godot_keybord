@@ -17,7 +17,7 @@ grow_vertical = 2
 color = Color(0.08, 0.08, 0.12, 1)
 
 [node name="PianoManager" type="Node2D" parent="."]
-position = Vector2(200, 400)
+position = Vector2(332, 500)
 script = ExtResource("2_piano_mgr")
 
 [node name="WhiteKeys" type="Node2D" parent="PianoManager"]
@@ -28,6 +28,8 @@ script = ExtResource("2_piano_mgr")
 script = ExtResource("3_seq_detect")
 
 [node name="FloatingCharacters" type="Node2D" parent="PianoManager"]
+
+[node name="PasswordImages" type="Node2D" parent="PianoManager"]
 
 [node name="ErrorSFX" type="AudioStreamPlayer" parent="PianoManager"]
 

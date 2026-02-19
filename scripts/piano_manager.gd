@@ -1,23 +1,35 @@
 extends Node2D
 
-signal correct_sequence_entered(reward_chars: Array)
-signal final_sequence_entered(reward_chars: Array)
+signal password_completed()
 
 @onready var sequence_detector: Node = $SequenceDetector
 @onready var floating_chars_parent: Node2D = $FloatingCharacters
 @onready var error_sfx: AudioStreamPlayer = $ErrorSFX
 @onready var white_keys_container: Node2D = $WhiteKeys
 @onready var black_keys_container: Node2D = $BlackKeys
+@onready var password_images_container: Node2D = $PasswordImages
 
 var key_nodes: Dictionary = {}  # key_id -> PianoKey node
-var floating_char_scene: PackedScene = preload("res://scenes/floating_character.tscn")
 var piano_key_scene: PackedScene = preload("res://scenes/piano_key.tscn")
+var password_image_scene: PackedScene = preload("res://scenes/password_image.tscn")
+
+var password_solved: bool = false
 
 
 func _ready() -> void:
+	# Open MIDI inputs
+	OS.open_midi_inputs()
+	var midi_inputs := OS.get_connected_midi_inputs()
+	if midi_inputs.size() > 0:
+		print("MIDI devices found: ", midi_inputs)
+	else:
+		print("No MIDI device found. Using keyboard fallback (Z-M lower, Q-I upper).")
+
 	_create_piano_keys()
 	_register_all_keys()
-	sequence_detector.sequence_result.connect(_on_sequence_result)
+
+	sequence_detector.password_step.connect(_on_password_step)
+	sequence_detector.password_completed.connect(_on_password_completed)
 
 	# Load error sound
 	var error_path := Config.get_error_sfx_path()
@@ -26,7 +38,7 @@ func _ready() -> void:
 
 
 func _create_piano_keys() -> void:
-	# Create white keys first
+	# Create white keys
 	var white_index := 0
 	for key_id in Config.WHITE_KEY_ORDER:
 		var key_instance = piano_key_scene.instantiate()
@@ -44,7 +56,6 @@ func _create_piano_keys() -> void:
 		key_instance.key_id = key_id
 		key_instance.is_black = true
 
-		# Position: offset from the white key it sits after
 		var white_idx: int = Config.BLACK_KEY_AFTER_WHITE[key_id]
 		var white_x: float = white_idx * (Config.WHITE_KEY_WIDTH + Config.KEY_GAP)
 		key_instance.position = Vector2(
@@ -60,9 +71,35 @@ func _register_all_keys() -> void:
 		key_nodes[key_node.key_id] = key_node
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventKey:
+func _input(event: InputEvent) -> void:
+	# Handle MIDI input
+	if event is InputEventMIDI:
+		_handle_midi(event)
 		return
+
+	# Keyboard fallback
+	if event is InputEventKey:
+		_handle_keyboard(event)
+
+
+func _handle_midi(event: InputEventMIDI) -> void:
+	if not Config.is_valid_midi_note(event.pitch):
+		return
+
+	var key_id := Config.midi_to_key_id(event.pitch)
+
+	if event.message == MIDI_MESSAGE_NOTE_ON and event.velocity > 0:
+		if key_id in key_nodes:
+			key_nodes[key_id].press()
+			if not password_solved:
+				sequence_detector.record_note(key_id)
+	elif event.message == MIDI_MESSAGE_NOTE_OFF or \
+		(event.message == MIDI_MESSAGE_NOTE_ON and event.velocity == 0):
+		if key_id in key_nodes:
+			key_nodes[key_id].release()
+
+
+func _handle_keyboard(event: InputEventKey) -> void:
 	if event.echo:
 		return
 
@@ -75,44 +112,63 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.pressed:
 		if key_id in key_nodes:
 			key_nodes[key_id].press()
-			sequence_detector.record_note(key_id)
+			if not password_solved:
+				sequence_detector.record_note(key_id)
 	else:
 		if key_id in key_nodes:
 			key_nodes[key_id].release()
 
 
-func _on_sequence_result(is_correct: bool, reward_chars: Array) -> void:
-	if is_correct:
-		if Config.is_final_stage:
-			final_sequence_entered.emit(reward_chars)
-		else:
-			correct_sequence_entered.emit(reward_chars)
-	else:
-		error_sfx.play()
+func _on_password_step(_step: int, _key_id: int) -> void:
+	# Optional: could add subtle visual feedback per correct step here
+	pass
 
 
-func spawn_floating_characters(reward_chars: Array) -> void:
-	var delay := 0.0
-	for entry in reward_chars:
-		var target_key_id: int = entry[0]
-		var character: String = entry[1]
-		if target_key_id in key_nodes:
-			# Stagger spawning for sequential reveal effect
-			var timer := get_tree().create_timer(delay)
-			timer.timeout.connect(
-				_spawn_single_character.bind(target_key_id, character)
-			)
-			delay += 0.3
+func _on_password_completed() -> void:
+	password_solved = true
+	_reveal_password_images()
+	password_completed.emit()
 
-func _spawn_single_character(target_key_id: int, character: String) -> void:
-	var char_instance = floating_char_scene.instantiate()
-	var key_node = key_nodes[target_key_id]
-	# Position above the key center
-	char_instance.position = key_node.global_position + Vector2(
-		key_node.size.x / 2.0, -10
+
+func _reveal_password_images() -> void:
+	# Track how many images are placed on each key for vertical stacking
+	var key_image_count: Dictionary = {}
+
+	for step in range(Config.password_sequence.size()):
+		var key_id: int = Config.password_sequence[step]
+		var delay: float = step * Config.PASSWORD_REVEAL_DELAY
+
+		# Count images per key for stacking
+		if key_id not in key_image_count:
+			key_image_count[key_id] = 0
+		var stack_index: int = key_image_count[key_id]
+		key_image_count[key_id] += 1
+
+		var timer := get_tree().create_timer(delay)
+		timer.timeout.connect(
+			_spawn_password_image.bind(step, key_id, stack_index)
+		)
+
+
+func _spawn_password_image(step: int, key_id: int, stack_index: int) -> void:
+	if key_id not in key_nodes:
+		return
+
+	var key_node = key_nodes[key_id]
+	var image_instance = password_image_scene.instantiate()
+
+	# Position above the key, stacking upward for repeated keys
+	var img_h: float = Config.PASSWORD_IMAGE_SIZE.y
+	var base_y: float = -img_h - 10
+	var y_offset: float = base_y - (stack_index * (img_h + 5))
+
+	image_instance.position = key_node.position + Vector2(
+		(key_node.size.x - Config.PASSWORD_IMAGE_SIZE.x) / 2.0,
+		y_offset
 	)
-	char_instance.display_character = character
-	floating_chars_parent.add_child(char_instance)
+	image_instance.step_index = step
+	password_images_container.add_child(image_instance)
+	image_instance.reveal()
 
 
 func fade_out_all_keys() -> void:
@@ -120,4 +176,4 @@ func fade_out_all_keys() -> void:
 	for key_id in key_nodes:
 		tween.tween_property(key_nodes[key_id], "modulate:a", 0.0, 2.0)
 	await tween.finished
-	set_process_unhandled_input(false)
+	set_process_input(false)

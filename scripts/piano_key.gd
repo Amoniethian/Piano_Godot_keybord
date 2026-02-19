@@ -31,16 +31,18 @@ func _ready() -> void:
 	pressed_overlay.size = size
 	pressed_overlay.modulate.a = 0.0
 
-	# Set keyboard label
-	if key_id >= 0 and key_id < Config.KEY_ID_TO_LABEL.size():
-		key_label.text = Config.KEY_ID_TO_LABEL[key_id]
+	# Show note name on the key
+	if key_id >= 0 and key_id < Config.NOTE_NAMES.size():
+		key_label.text = Config.NOTE_NAMES[key_id]
 	key_label.size = Vector2(size.x, 30)
 	key_label.position = Vector2(0, size.y - 35)
 	key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if is_black:
 		key_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+		key_label.add_theme_font_size_override("font_size", 10)
 	else:
 		key_label.add_theme_color_override("font_color", Color(0.3, 0.3, 0.3))
+		key_label.add_theme_font_size_override("font_size", 12)
 
 	# Load audio file
 	var audio_path := Config.get_note_audio_path(key_id)

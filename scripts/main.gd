@@ -5,16 +5,16 @@ extends Node2D
 
 
 func _ready() -> void:
-	piano_manager.correct_sequence_entered.connect(_on_correct_sequence)
-	piano_manager.final_sequence_entered.connect(_on_final_sequence)
+	piano_manager.password_completed.connect(_on_password_completed)
 
 
-func _on_correct_sequence(reward_chars: Array) -> void:
-	piano_manager.spawn_floating_characters(reward_chars)
-
-
-func _on_final_sequence(reward_chars: Array) -> void:
-	piano_manager.spawn_floating_characters(reward_chars)
-	await get_tree().create_timer(2.5).timeout
-	await piano_manager.fade_out_all_keys()
-	video_overlay.play_video()
+func _on_password_completed() -> void:
+	# Password is solved - images are being revealed by piano_manager.
+	# Player can now freely play the piano.
+	if Config.is_final_stage:
+		# Wait for all images to reveal, then proceed to video
+		var total_reveal_time: float = \
+			Config.password_sequence.size() * Config.PASSWORD_REVEAL_DELAY + 2.0
+		await get_tree().create_timer(total_reveal_time).timeout
+		await piano_manager.fade_out_all_keys()
+		video_overlay.play_video()
