@@ -122,9 +122,8 @@ func _find_audio_file(base_path: String) -> String:
 #  14=D5  15=D#5 16=E5  17=F5  18=F#5 19=G5  20=G#5
 #  21=A5  22=A#5 23=B5  24=C6
 #
-# Current password: Twinkle Twinkle Little Star first 9 notes
-# C4 C4 G4 G4 A4 A4 G4 F4 F4
-var password_sequence: Array[int] = [0, 0, 7, 7, 9, 9, 7, 5, 5]
+# Current password: D#4 D4 E4 C4 C4 D4 A4 F5 B4
+var password_sequence: Array[int] = [3, 2, 4, 0, 0, 2, 9, 17, 11]
 
 # Password images directory
 # Place images named password_01.png, password_02.png, ... password_09.png
