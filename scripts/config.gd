@@ -117,9 +117,9 @@ const FINAL_VIDEO_PATH: String = "res://video/final_video.ogv"
 # ======================================================
 const WHITE_KEY_WIDTH: int = 80
 const WHITE_KEY_HEIGHT: int = 300
-const BLACK_KEY_WIDTH: int = 50
-const BLACK_KEY_HEIGHT: int = 190
-const KEY_GAP: int = 4
+const BLACK_KEY_WIDTH: int = 44
+const BLACK_KEY_HEIGHT: int = 185
+const KEY_GAP: int = 3
 
 # --- Sound Fade Config ---
 const INITIAL_VOLUME_DB: float = 0.0
