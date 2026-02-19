@@ -131,44 +131,39 @@ func _on_password_completed() -> void:
 
 
 func _reveal_password_images() -> void:
-	# Track how many images are placed on each key for vertical stacking
-	var key_image_count: Dictionary = {}
+	# One circle per unique key, revealed in order of first appearance
+	var revealed_keys: Dictionary = {}
+	var reveal_index: int = 0
 
 	for step in range(Config.password_sequence.size()):
 		var key_id: int = Config.password_sequence[step]
-		var delay: float = step * Config.PASSWORD_REVEAL_DELAY
 
-		# Count images per key for stacking
-		if key_id not in key_image_count:
-			key_image_count[key_id] = 0
-		var stack_index: int = key_image_count[key_id]
-		key_image_count[key_id] += 1
+		if key_id in revealed_keys:
+			continue  # This key already has a circle
+
+		revealed_keys[key_id] = true
+		var delay: float = reveal_index * Config.PASSWORD_REVEAL_DELAY
+		reveal_index += 1
 
 		var timer := get_tree().create_timer(delay)
-		timer.timeout.connect(
-			_spawn_password_image.bind(step, key_id, stack_index)
-		)
+		timer.timeout.connect(_spawn_password_circle.bind(key_id))
 
 
-func _spawn_password_image(step: int, key_id: int, stack_index: int) -> void:
+func _spawn_password_circle(key_id: int) -> void:
 	if key_id not in key_nodes:
 		return
 
 	var key_node = key_nodes[key_id]
-	var image_instance = password_image_scene.instantiate()
+	var circle = password_image_scene.instantiate()
+	var circle_size := Vector2(50, 50)
 
-	# Position above the key, stacking upward for repeated keys
-	var img_h: float = Config.PASSWORD_IMAGE_SIZE.y
-	var base_y: float = -img_h - 10
-	var y_offset: float = base_y - (stack_index * (img_h + 5))
-
-	image_instance.position = key_node.position + Vector2(
-		(key_node.size.x - Config.PASSWORD_IMAGE_SIZE.x) / 2.0,
-		y_offset
+	# Center above the key
+	circle.position = key_node.position + Vector2(
+		(key_node.size.x - circle_size.x) / 2.0,
+		-circle_size.y - 10
 	)
-	image_instance.step_index = step
-	password_images_container.add_child(image_instance)
-	image_instance.reveal()
+	password_images_container.add_child(circle)
+	circle.reveal()
 
 
 func fade_out_all_keys() -> void:

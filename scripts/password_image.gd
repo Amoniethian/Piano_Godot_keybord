@@ -1,21 +1,19 @@
 extends Control
 
-## A single password image that fades in and stays visible.
+## A gray circle indicator that appears above a password key.
 
-var step_index: int = 0
-
-@onready var texture_rect: TextureRect = $TextureRect
+const CIRCLE_RADIUS: float = 25.0
+const CIRCLE_COLOR: Color = Color(0.5, 0.5, 0.5, 1.0)
 
 
 func _ready() -> void:
 	modulate.a = 0.0
-	size = Config.PASSWORD_IMAGE_SIZE
-	texture_rect.size = Config.PASSWORD_IMAGE_SIZE
+	size = Vector2(CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2)
+	queue_redraw()
 
-	# Load password image for this step
-	var image_path := Config.get_password_image_path(step_index)
-	if ResourceLoader.exists(image_path):
-		texture_rect.texture = load(image_path)
+
+func _draw() -> void:
+	draw_circle(Vector2(CIRCLE_RADIUS, CIRCLE_RADIUS), CIRCLE_RADIUS, CIRCLE_COLOR)
 
 
 func reveal() -> void:
