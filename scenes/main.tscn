@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://cma1n_scene01"]
+[gd_scene load_steps=6 format=3 uid="uid://cma1n_scene01"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/piano_manager.gd" id="2_piano_mgr"]
 [ext_resource type="Script" path="res://scripts/sequence_detector.gd" id="3_seq_detect"]
 [ext_resource type="Script" path="res://scripts/video_player_overlay.gd" id="4_video_ovl"]
+[ext_resource type="Script" path="res://scripts/music_teacher_system.gd" id="5_music_teacher"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -32,6 +33,21 @@ script = ExtResource("3_seq_detect")
 [node name="PasswordImages" type="Node2D" parent="PianoManager"]
 
 [node name="ErrorSFX" type="AudioStreamPlayer" parent="PianoManager"]
+
+[node name="MusicTeacherSystem" type="Node" parent="PianoManager"]
+script = ExtResource("5_music_teacher")
+
+[node name="DialogueLabel" type="Label" parent="PianoManager"]
+position = Vector2(0, -130)
+size = Vector2(1260, 70)
+visible = false
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(1, 1, 0.8, 1)
+
+[node name="VoicePlayer" type="AudioStreamPlayer" parent="PianoManager"]
 
 [node name="VideoPlayerOverlay" type="ColorRect" parent="."]
 anchors_preset = 15

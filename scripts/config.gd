@@ -3,6 +3,9 @@ extends Node
 ## Central configuration singleton for the Virtual Piano.
 ## Now configured for MIDI keyboard (AKAI LPK25 - 25 keys).
 ## Edit the values below to customize piano and password.
+##
+## [Music Teacher System]
+## star_note16 ambient groups, level sequences, chords, dialogue — see below.
 
 # ======================================================
 # --- Note Definitions (25 keys: C4 to C6) ---
@@ -160,6 +163,58 @@ const KEY_GAP: int = 3
 const INITIAL_VOLUME_DB: float = 0.0
 const FADE_TARGET_DB: float = -25.0
 const FADE_DURATION: float = 4.0
+
+# ======================================================
+# --- Music Teacher System ---
+# ======================================================
+
+# star_note16: 6 ambient background note groups, 3 notes each (key_ids 0-24)
+const STAR_NOTE_GROUPS: Array = [
+	[0, 4, 7],    # C4-E4-G4  (C major arpeggio)
+	[5, 9, 12],   # F4-A4-C5  (F major arpeggio)
+	[7, 11, 14],  # G4-B4-D5  (G major arpeggio)
+	[0, 2, 4],    # C4-D4-E4  (ascending melody)
+	[12, 9, 7],   # C5-A4-G4  (descending melody)
+	[4, 7, 12],   # E4-G4-C5  (rising skip)
+]
+
+# Level sequences: Level 1 = 6 notes, Level 2 = 9, Level 3 = 9
+const LEVEL_SEQUENCES: Array = [
+	[0, 4, 7, 5, 4, 2],               # Level 1: C4 E4 G4 F4 E4 D4
+	[0, 2, 4, 5, 7, 9, 11, 12, 14],   # Level 2: ascending C major scale
+	[3, 2, 4, 0, 0, 2, 9, 17, 11],    # Level 3: D#4 D4 E4 C4 C4 D4 A4 F5 B4
+]
+
+# Chord definitions (key_ids pressed simultaneously)
+const CHORD_INTRO:   Array = [0, 4, 7, 12]       # C major + octave C5
+const CHORD_SUCCESS: Array = [0, 4, 7, 12, 16]   # C major extended + E5
+const CHORD_FAILURE: Array = [1, 4, 6]            # Dissonant cluster
+
+# Teacher dialogue lines (bilingual Chinese/English, placeholder)
+const TEACHER_DIALOGUE: Array[String] = [
+	"placeholder line 15\n占位符台词 15",
+	"placeholder line 15\n占位符台词 15",
+	"placeholder line 15\n占位符台词 15",
+	"placeholder line 15\n占位符台词 15",
+	"placeholder line 15\n占位符台词 15",
+]
+# Voice line shown at the start of each level demonstration
+const VOICE_LISTEN_TEXT: String = "听好了，跟上我的示范\nListen carefully, follow my demonstration"
+
+# Voice audio paths — place files here; if absent, only text is shown
+const VOICE_AUDIO_DIR:          String = "res://audio/voice/"
+const VOICE_INTRO_AUDIO:        String = "res://audio/voice/intro_listen.wav"
+const VOICE_DIALOGUE_AUDIO_FMT: String = "res://audio/voice/dialogue_%02d.wav"
+
+# Timing constants
+const DEMO_NOTE_INTERVAL:        float = 0.5    # seconds between each demo note
+const DEMO_NOTE_HOLD:            float = 0.3    # seconds each demo note is held down
+const STAR_NOTE_INTERVAL:        float = 2.0    # seconds between ambient note groups
+const STAR_NOTE_HOLD:            float = 0.25   # seconds each ambient note held
+const VOICE_INTERVAL_MIN:        float = 10.0   # min seconds between dialogue lines
+const VOICE_INTERVAL_MAX:        float = 15.0   # max seconds between dialogue lines
+const CHORD_HOLD_DURATION:       float = 1.0    # seconds chord keys are held
+const DIALOGUE_DISPLAY_DURATION: float = 5.0    # seconds dialogue label stays visible
 
 # ======================================================
 # --- Keyboard Fallback (for testing without MIDI) ---

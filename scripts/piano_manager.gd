@@ -1,6 +1,9 @@
 extends Node2D
 
 signal password_completed()
+## Emitted every time a piano key is pressed (key_id 0-24).
+## MusicTeacherSystem connects to this to route game logic.
+signal key_pressed(key_id: int)
 
 @onready var sequence_detector: Node = $SequenceDetector
 @onready var floating_chars_parent: Node2D = $FloatingCharacters
@@ -13,7 +16,9 @@ var key_nodes: Dictionary = {}  # key_id -> PianoKey node
 var piano_key_scene: PackedScene = preload("res://scenes/piano_key.tscn")
 var password_image_scene: PackedScene = preload("res://scenes/password_image.tscn")
 
-var password_solved: bool = false
+# Password system is now handled by MusicTeacherSystem.
+# Setting password_solved = true disables the old sequence_detector routing.
+var password_solved: bool = true
 
 
 func _ready() -> void:
@@ -28,10 +33,7 @@ func _ready() -> void:
 	_create_piano_keys()
 	_register_all_keys()
 
-	sequence_detector.password_step.connect(_on_password_step)
-	sequence_detector.password_completed.connect(_on_password_completed)
-
-	# Load error sound
+	# Load error sound (kept for compatibility)
 	var error_path := Config.get_error_sfx_path()
 	if ResourceLoader.exists(error_path):
 		error_sfx.stream = load(error_path)
@@ -96,8 +98,7 @@ func _handle_midi(event: InputEventMIDI) -> void:
 	if event.message == MIDI_MESSAGE_NOTE_ON and event.velocity > 0:
 		if key_id in key_nodes:
 			key_nodes[key_id].press()
-			if not password_solved:
-				sequence_detector.record_note(key_id)
+			key_pressed.emit(key_id)
 	elif event.message == MIDI_MESSAGE_NOTE_OFF or \
 		(event.message == MIDI_MESSAGE_NOTE_ON and event.velocity == 0):
 		if key_id in key_nodes:
@@ -117,15 +118,13 @@ func _handle_keyboard(event: InputEventKey) -> void:
 	if event.pressed:
 		if key_id in key_nodes:
 			key_nodes[key_id].press()
-			if not password_solved:
-				sequence_detector.record_note(key_id)
+			key_pressed.emit(key_id)
 	else:
 		if key_id in key_nodes:
 			key_nodes[key_id].release()
 
 
 func _on_password_step(_step: int, _key_id: int) -> void:
-	# Optional: could add subtle visual feedback per correct step here
 	pass
 
 
@@ -135,8 +134,8 @@ func _on_password_completed() -> void:
 	password_completed.emit()
 
 
+# Legacy reveal (kept for compatibility with Config.is_final_stage path).
 func _reveal_password_images() -> void:
-	# One circle per unique key, revealed in order of first appearance
 	var revealed_keys: Dictionary = {}
 	var reveal_index: int = 0
 
@@ -144,7 +143,7 @@ func _reveal_password_images() -> void:
 		var key_id: int = Config.password_sequence[step]
 
 		if key_id in revealed_keys:
-			continue  # This key already has a circle
+			continue
 
 		revealed_keys[key_id] = true
 		var delay: float = reveal_index * Config.PASSWORD_REVEAL_DELAY
@@ -169,6 +168,78 @@ func _spawn_password_circle(key_id: int) -> void:
 	)
 	password_images_container.add_child(circle)
 	circle.reveal()
+
+
+# ── Music Teacher System: final reveal ────────────────────────────────────────
+
+## Called by MusicTeacherSystem after level 3 success.
+## sequence   — the level 3 note sequence (used to determine which keys get circles)
+## play_order — the order the player actually pressed the notes (same length as sequence)
+func reveal_final_images(sequence: Array, play_order: Array) -> void:
+	# 1. Collect unique key_ids, sorted by key_id (left→right keyboard order)
+	var unique_keys: Array = []
+	var seen: Dictionary = {}
+	for k in sequence:
+		if k not in seen:
+			seen[k] = true
+			unique_keys.append(k)
+	unique_keys.sort()
+
+	# 2. Spawn and reveal circles in keyboard position order, with staggered delay
+	var circle_map: Dictionary = {}  # key_id -> PasswordImage node
+	for i in range(unique_keys.size()):
+		var key_id: int = unique_keys[i]
+		var delay: float = i * Config.PASSWORD_REVEAL_DELAY
+		get_tree().create_timer(delay).timeout.connect(
+			func(): _spawn_and_store_circle(key_id, circle_map)
+		)
+
+	# 3. After all circles revealed + 1 second, rearrange by play order
+	var total_delay: float = unique_keys.size() * Config.PASSWORD_REVEAL_DELAY + 1.0
+	get_tree().create_timer(total_delay).timeout.connect(
+		func(): _rearrange_circles(circle_map, play_order)
+	)
+
+
+func _spawn_and_store_circle(key_id: int, circle_map: Dictionary) -> void:
+	if key_id not in key_nodes:
+		return
+	var key_node = key_nodes[key_id]
+	var circle = password_image_scene.instantiate()
+	var circle_size := Vector2(50, 50)
+	circle.position = key_node.position + Vector2(
+		(key_node.size.x - circle_size.x) / 2.0,
+		-circle_size.y - 10
+	)
+	password_images_container.add_child(circle)
+	circle.reveal()
+	circle_map[key_id] = circle
+
+
+func _rearrange_circles(circle_map: Dictionary, play_order: Array) -> void:
+	# Build ordered list: unique notes in order of first appearance in play_order
+	var ordered: Array = []
+	var seen: Dictionary = {}
+	for k in play_order:
+		if k not in seen and k in circle_map:
+			seen[k] = true
+			ordered.append(k)
+
+	var n: int = ordered.size()
+	if n == 0:
+		return
+
+	# Target y: same height as initial circle spawn (above keys)
+	var circle_y: float = -60.0
+
+	# Distribute evenly across the piano width
+	var piano_width: float = 15.0 * (Config.WHITE_KEY_WIDTH + Config.KEY_GAP)
+	var spacing: float = piano_width / float(max(n - 1, 1))
+
+	for i in range(n):
+		var key_id: int = ordered[i]
+		var target := Vector2(i * spacing, circle_y)
+		circle_map[key_id].animate_to(target)
 
 
 func fade_out_all_keys() -> void:
