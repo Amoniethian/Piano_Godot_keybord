@@ -20,3 +20,10 @@ func reveal() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 1.0, 0.4) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+
+## Animate this circle to a new position (used for play-order rearrangement).
+func animate_to(target_pos: Vector2) -> void:
+	var tween := create_tween()
+	tween.tween_property(self, "position", target_pos, 0.5) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
