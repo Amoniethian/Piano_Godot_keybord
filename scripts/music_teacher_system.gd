@@ -36,6 +36,9 @@ var ambient_active: bool = false    # set false to stop ambient loop
 # ── Demo cancellation ─────────────────────────────────────────────────────────
 # Coroutines (_begin_level, _play_demonstration) check this flag at each await.
 var demo_cancel_flag: bool = false
+# Tracks which key the demo is currently holding (-1 = between notes / not in demo).
+# Player pressing this exact key during demo is allowed (playing along); any other key fails.
+var current_demo_note: int = -1
 
 
 func _ready() -> void:
@@ -114,8 +117,9 @@ func _on_key_pressed(key_id: int) -> void:
 		State.AMBIENT:
 			_begin_level()
 		State.DEMONSTRATION:
-			# Player pressed a key during demo → failure
-			_trigger_failure()
+			# Correct note played along with demo → allowed; anything else → failure
+			if key_id != current_demo_note:
+				_trigger_failure()
 		State.PLAYER_INPUT:
 			_record_player_note(key_id)
 
@@ -154,6 +158,7 @@ func _play_demonstration() -> void:
 		if demo_cancel_flag:
 			return
 		var key_id: int = sequence[i]
+		current_demo_note = key_id   # mark which note is active so player can play along
 		# Press key (visual + audio)
 		if key_id in piano_manager.key_nodes:
 			piano_manager.key_nodes[key_id].press()
@@ -162,6 +167,7 @@ func _play_demonstration() -> void:
 			return
 		if key_id in piano_manager.key_nodes:
 			piano_manager.key_nodes[key_id].release()
+		current_demo_note = -1   # note released — between notes, any press now fails
 		# Gap between notes
 		var gap: float = Config.DEMO_NOTE_INTERVAL - Config.DEMO_NOTE_HOLD
 		if gap > 0.0:
@@ -200,6 +206,7 @@ func _trigger_failure() -> void:
 	if current_state == State.FAILURE:
 		return
 	demo_cancel_flag = true
+	current_demo_note = -1
 	current_state = State.FAILURE
 	_hide_dialogue()
 	_release_all_keys()
