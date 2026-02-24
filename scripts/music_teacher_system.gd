@@ -6,10 +6,11 @@ extends Node
 ##   AMBIENT      → background star_note16 groups + random teacher dialogue
 ##                  any key press → DEMONSTRATION
 ##   DEMONSTRATION → chord + voice + note-by-note demo playback
-##                  key press during demo → FAILURE
+##                  press sequence[0] → PLAYER_INPUT (demo cancelled, first note counted)
+##                  press wrong key → FAILURE
 ##                  demo finishes → PLAYER_INPUT
-##   PLAYER_INPUT  → player repeats the sequence
-##                  wrong note → FAILURE
+##   PLAYER_INPUT  → player repeats the sequence; 2s timeout per note
+##                  wrong note or timeout → FAILURE
 ##                  correct sequence → SUCCESS
 ##   FAILURE       → failure chord, then immediately restart DEMONSTRATION
 ##   SUCCESS       → success chord, advance level (or FINAL_REVEAL on level 3)
@@ -37,8 +38,11 @@ var ambient_active: bool = false    # set false to stop ambient loop
 # Coroutines (_begin_level, _play_demonstration) check this flag at each await.
 var demo_cancel_flag: bool = false
 # Tracks which key the demo is currently holding (-1 = between notes / not in demo).
-# Player pressing this exact key during demo is allowed (playing along); any other key fails.
 var current_demo_note: int = -1
+
+# ── Input timeout ─────────────────────────────────────────────────────────────
+# Set true when PLAYER_INPUT begins; cleared before any failure/success.
+var input_timeout_active: bool = false
 
 
 func _ready() -> void:
@@ -117,8 +121,19 @@ func _on_key_pressed(key_id: int) -> void:
 		State.AMBIENT:
 			_begin_level()
 		State.DEMONSTRATION:
-			# Correct note played along with demo → allowed; anything else → failure
-			if key_id != current_demo_note:
+			var sequence: Array = Config.LEVEL_SEQUENCES[current_level]
+			if key_id == sequence[0]:
+				# Player starts the correct sequence early — cancel demo and let them play
+				demo_cancel_flag = true
+				if current_demo_note != -1 and current_demo_note in piano_manager.key_nodes:
+					piano_manager.key_nodes[current_demo_note].release()
+				current_demo_note = -1
+				_hide_dialogue()
+				current_state = State.PLAYER_INPUT
+				player_input.clear()
+				player_input.append(key_id)
+				_start_input_timeout()
+			else:
 				_trigger_failure()
 		State.PLAYER_INPUT:
 			_record_player_note(key_id)
@@ -179,6 +194,7 @@ func _play_demonstration() -> void:
 	_hide_dialogue()
 	current_state = State.PLAYER_INPUT
 	player_input.clear()
+	_start_input_timeout()
 
 
 # ── Player Input ──────────────────────────────────────────────────────────────
@@ -197,7 +213,11 @@ func _record_player_note(key_id: int) -> void:
 	player_input.append(key_id)
 
 	if player_input.size() >= sequence.size():
+		_cancel_input_timeout()
 		_trigger_success()
+	else:
+		_cancel_input_timeout()
+		_start_input_timeout()
 
 
 # ── Failure ───────────────────────────────────────────────────────────────────
@@ -205,6 +225,7 @@ func _record_player_note(key_id: int) -> void:
 func _trigger_failure() -> void:
 	if current_state == State.FAILURE:
 		return
+	_cancel_input_timeout()
 	demo_cancel_flag = true
 	current_demo_note = -1
 	current_state = State.FAILURE
@@ -220,6 +241,7 @@ func _trigger_failure() -> void:
 # ── Success ───────────────────────────────────────────────────────────────────
 
 func _trigger_success() -> void:
+	_cancel_input_timeout()
 	current_state = State.SUCCESS
 
 	# Save level 3 play order for image rearrangement
@@ -247,6 +269,17 @@ func _begin_final_reveal() -> void:
 func _release_all_keys() -> void:
 	for key_id in piano_manager.key_nodes:
 		piano_manager.key_nodes[key_id].release()
+
+
+func _start_input_timeout() -> void:
+	input_timeout_active = true
+	await get_tree().create_timer(2.0).timeout
+	if input_timeout_active:
+		_trigger_failure()
+
+
+func _cancel_input_timeout() -> void:
+	input_timeout_active = false
 
 
 func _play_chord(notes: Array) -> void:
