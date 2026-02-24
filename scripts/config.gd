@@ -192,11 +192,11 @@ const CHORD_FAILURE: Array = [1, 4, 6]            # Dissonant cluster
 
 # Teacher dialogue lines (bilingual Chinese/English, placeholder)
 const TEACHER_DIALOGUE: Array[String] = [
-	"placeholder line 15\n占位符台词 15",
-	"placeholder line 15\n占位符台词 15",
-	"placeholder line 15\n占位符台词 15",
-	"placeholder line 15\n占位符台词 15",
-	"placeholder line 15\n占位符台词 15",
+	"这次试着弹出更多情感，完全感受不到情绪——太僵硬了。\nTry to play with more expression this time, there's no emotion at all – it's too stiff.",
+	"每个音都一模一样。多注意一下触键和断连。\nEvery note sounds the same. Pay more attention to the articulation.",
+	"别急着往前赶，你的节奏越来越散了。\nStop rushing through, your rhythms are getting sloppy.",
+	"你的乐句感觉太机械、太刻意了。放松手腕，再来一遍。\nYour phrasing feels far too robotic and forced. Relax your wrists and try again.",
+	"记住强弱变化；弹奏时完全没有对比。再试一次。\nRemember your dynamics; there's no contrast whatsoever as you play. Try again.",
 ]
 # Voice line shown at the start of each level demonstration
 const VOICE_LISTEN_TEXT: String = "听好了，跟上我的示范\nListen carefully, follow my demonstration"
