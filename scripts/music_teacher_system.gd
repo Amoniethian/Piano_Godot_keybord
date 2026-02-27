@@ -41,8 +41,8 @@ var demo_cancel_flag: bool = false
 var current_demo_note: int = -1
 
 # ── Input timeout ─────────────────────────────────────────────────────────────
-# Set true when PLAYER_INPUT begins; cleared before any failure/success.
-var input_timeout_active: bool = false
+# Incrementing this counter invalidates all older timeout coroutines.
+var timeout_generation: int = 0
 
 
 func _ready() -> void:
@@ -272,14 +272,15 @@ func _release_all_keys() -> void:
 
 
 func _start_input_timeout() -> void:
-	input_timeout_active = true
+	timeout_generation += 1
+	var my_gen: int = timeout_generation
 	await get_tree().create_timer(2.0).timeout
-	if input_timeout_active:
+	if timeout_generation == my_gen:
 		_trigger_failure()
 
 
 func _cancel_input_timeout() -> void:
-	input_timeout_active = false
+	timeout_generation += 1
 
 
 func _play_chord(notes: Array) -> void:
