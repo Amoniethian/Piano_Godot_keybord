@@ -69,8 +69,14 @@ func _create_piano_keys() -> void:
 func _register_all_keys() -> void:
 	for key_node in white_keys_container.get_children():
 		key_nodes[key_node.key_id] = key_node
+		key_node.touched_press.connect(_on_key_touched_press)
 	for key_node in black_keys_container.get_children():
 		key_nodes[key_node.key_id] = key_node
+		key_node.touched_press.connect(_on_key_touched_press)
+
+
+func _on_key_touched_press(pressed_key_id: int) -> void:
+	key_pressed.emit(pressed_key_id)
 
 
 func _input(event: InputEvent) -> void:

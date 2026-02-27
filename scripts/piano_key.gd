@@ -3,6 +3,11 @@ extends Control
 @export var key_id: int = 0
 @export var is_black: bool = false
 
+## Emitted when this key is pressed via touch or mouse click.
+signal touched_press(key_id: int)
+## Emitted when this key is released via touch or mouse click.
+signal touched_release(key_id: int)
+
 @onready var key_visual: ColorRect = $KeyVisual
 @onready var pressed_overlay: ColorRect = $PressedOverlay
 @onready var note_player: AudioStreamPlayer = $NotePlayer
@@ -98,3 +103,22 @@ func _stop_fade() -> void:
 	if fade_tween and fade_tween.is_valid():
 		fade_tween.kill()
 	fade_tween = null
+
+
+func _gui_input(event: InputEvent) -> void:
+	# Mouse click (desktop / single-touch on Android via emulate_mouse_from_touch)
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			press()
+			touched_press.emit(key_id)
+		else:
+			release()
+			touched_release.emit(key_id)
+	# Raw screen touch (multi-touch on Android)
+	elif event is InputEventScreenTouch:
+		if event.pressed:
+			press()
+			touched_press.emit(key_id)
+		else:
+			release()
+			touched_release.emit(key_id)
