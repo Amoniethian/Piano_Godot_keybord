@@ -39,6 +39,7 @@ public class GodotMidiUSB extends GodotPlugin {
     private MidiManager midiManager;
     private MidiDevice currentDevice;
     private MidiOutputPort currentOutputPort;
+    // Handler used only for MidiManager callbacks; signal emission uses runOnRenderThread.
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // ── Constructor ──────────────────────────────────────────────────────────
@@ -136,7 +137,7 @@ public class GodotMidiUSB extends GodotPlugin {
         public void onDeviceAdded(MidiDeviceInfo info) {
             String name = getDeviceName(info);
             Log.i(TAG, "MIDI device connected: " + name);
-            emitSignal("midi_device_connected", name);
+            emitSignalOnRenderThread("midi_device_connected", name);
 
             // Auto-open if we don't have a device yet
             if (currentDevice == null && getOutputPortCount(info) > 0) {
@@ -148,7 +149,7 @@ public class GodotMidiUSB extends GodotPlugin {
         public void onDeviceRemoved(MidiDeviceInfo info) {
             String name = getDeviceName(info);
             Log.i(TAG, "MIDI device disconnected: " + name);
-            emitSignal("midi_device_disconnected", name);
+            emitSignalOnRenderThread("midi_device_disconnected", name);
             closeCurrentDevice();
         }
     };
@@ -210,68 +211,111 @@ public class GodotMidiUSB extends GodotPlugin {
     // ── MIDI data receiver ───────────────────────────────────────────────────
 
     private final MidiReceiver midiReceiver = new MidiReceiver() {
+        /**
+         * Tracks the last status byte for Running Status support.
+         * Many MIDI keyboards omit the status byte when sending consecutive
+         * messages of the same type (e.g. rapid note-on bursts). Without
+         * tracking the running status, those messages would be silently dropped.
+         */
+        private int runningStatus = 0;
+
         @Override
         public void onSend(byte[] data, int offset, int count, long timestamp) {
-            // Parse raw MIDI messages
             int i = offset;
-            while (i < offset + count) {
-                int status = data[i] & 0xFF;
+            int end = offset + count;
 
-                // Skip non-status bytes (running status not supported for simplicity)
-                if (status < 0x80) {
-                    i++;
-                    continue;
+            while (i < end) {
+                int b = data[i] & 0xFF;
+
+                // ── Determine current status byte ─────────────────────────
+                int status;
+                if (b >= 0x80) {
+                    // New explicit status byte
+                    status = b;
+                    // System Real-Time messages (0xF8-0xFF) are single-byte and
+                    // do NOT update the running status.
+                    if (b < 0xF8) {
+                        // System Common messages (0xF0-0xF7) clear running status.
+                        // Channel messages (0x80-0xEF) update running status.
+                        if (b < 0xF0) {
+                            runningStatus = b;
+                        } else {
+                            runningStatus = 0; // SysEx / System Common clears it
+                        }
+                    }
+                    i++; // consume status byte
+                } else {
+                    // Data byte — apply running status
+                    if (runningStatus == 0) {
+                        // No running status established; skip this byte
+                        i++;
+                        continue;
+                    }
+                    status = runningStatus;
+                    // Do NOT advance i here; the data byte will be consumed below
                 }
 
                 int messageType = status & 0xF0;
 
+                // ── Parse message body ────────────────────────────────────
                 switch (messageType) {
-                    case 0x90: // Note On
-                        if (i + 2 < offset + count) {
-                            int pitch = data[i + 1] & 0x7F;
-                            int velocity = data[i + 2] & 0x7F;
+                    case 0x90: { // Note On
+                        if (i + 1 < end) {
+                            int pitch    = data[i]     & 0x7F;
+                            int velocity = data[i + 1] & 0x7F;
                             if (velocity > 0) {
-                                emitOnMainThread("midi_note_on", pitch, velocity);
+                                emitSignalOnRenderThread("midi_note_on", pitch, velocity);
                             } else {
-                                // Note On with velocity 0 = Note Off
-                                emitOnMainThread("midi_note_off", pitch);
+                                // Note On with velocity 0 == Note Off
+                                emitSignalOnRenderThread("midi_note_off", pitch);
                             }
-                        }
-                        i += 3;
-                        break;
-
-                    case 0x80: // Note Off
-                        if (i + 2 < offset + count) {
-                            int pitch = data[i + 1] & 0x7F;
-                            emitOnMainThread("midi_note_off", pitch);
-                        }
-                        i += 3;
-                        break;
-
-                    case 0xA0: // Polyphonic Aftertouch
-                    case 0xB0: // Control Change
-                    case 0xE0: // Pitch Bend
-                        i += 3; // 3-byte messages, skip
-                        break;
-
-                    case 0xC0: // Program Change
-                    case 0xD0: // Channel Pressure
-                        i += 2; // 2-byte messages, skip
-                        break;
-
-                    case 0xF0: // System messages
-                        if (status == 0xF0) {
-                            // SysEx: skip until 0xF7
-                            while (i < offset + count && (data[i] & 0xFF) != 0xF7) {
-                                i++;
-                            }
-                            i++; // skip 0xF7
-                        } else if (status >= 0xF1 && status <= 0xF3) {
                             i += 2;
                         } else {
-                            i += 1;
+                            i = end; // truncated packet, discard remainder
                         }
                         break;
+                    }
+
+                    case 0x80: { // Note Off
+                        if (i + 1 < end) {
+                            int pitch = data[i] & 0x7F;
+                            emitSignalOnRenderThread("midi_note_off", pitch);
+                            i += 2; // pitch + velocity (velocity ignored)
+                        } else {
+                            i = end;
+                        }
+                        break;
+                    }
+
+                    case 0xA0: // Polyphonic Aftertouch  (2 data bytes)
+                    case 0xB0: // Control Change         (2 data bytes)
+                    case 0xE0: // Pitch Bend             (2 data bytes)
+                        i += 2;
+                        break;
+
+                    case 0xC0: // Program Change   (1 data byte)
+                    case 0xD0: // Channel Pressure  (1 data byte)
+                        i += 1;
+                        break;
+
+                    case 0xF0: { // System messages (status byte already consumed)
+                        // Adjust: status byte was consumed above, so re-evaluate
+                        // using the original status value.
+                        if (status == 0xF0) {
+                            // SysEx: skip until 0xF7 end-of-exclusive
+                            while (i < end && (data[i] & 0xFF) != 0xF7) {
+                                i++;
+                            }
+                            if (i < end) i++; // consume 0xF7
+                        } else if (status >= 0xF1 && status <= 0xF3) {
+                            i += 1; // 1 data byte
+                        } else if (status == 0xF6) {
+                            // Tune Request — no data bytes
+                        } else if (status >= 0xF8) {
+                            // Real-Time (already i-advanced by status consumption)
+                        }
+                        break;
+                    }
 
                     default:
                         i++;
@@ -282,16 +326,21 @@ public class GodotMidiUSB extends GodotPlugin {
     };
 
     /**
-     * Emit signal on the main thread (Godot requires signals from the GL thread).
+     * Emit signal on Godot's render thread, which is required by the
+     * GodotPlugin framework in Godot 4.x.
      */
-    private void emitOnMainThread(final String signal, final Object... args) {
-        mainHandler.post(() -> {
-            try {
-                emitSignal(signal, args);
-            } catch (Exception e) {
-                Log.e(TAG, "Error emitting signal " + signal, e);
-            }
-        });
+    private void emitSignalOnRenderThread(final String signal, final Object... args) {
+        try {
+            getGodot().runOnRenderThread(() -> {
+                try {
+                    emitSignal(signal, args);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error emitting signal " + signal, e);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "runOnRenderThread failed for signal " + signal, e);
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

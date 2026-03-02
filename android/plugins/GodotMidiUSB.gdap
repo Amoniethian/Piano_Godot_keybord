@@ -2,4 +2,4 @@
 
 name="GodotMidiUSB"
 binary_type="local"
-binary="GodotMidiUSB/build/outputs/aar/GodotMidiUSB-release.aar"
+binary="GodotMidiUSB-release.aar"
