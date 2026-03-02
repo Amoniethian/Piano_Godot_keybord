@@ -26,19 +26,29 @@ var _midi_plugin = null
 
 func _ready() -> void:
 	# ── MIDI initialisation ──────────────────────────────────────────────
-	if OS.get_name() == "Android" and Engine.has_singleton("GodotMidiUSB"):
-		# Android: use native USB MIDI plugin
-		_midi_plugin = Engine.get_singleton("GodotMidiUSB")
-		_midi_plugin.connect("midi_note_on", _on_android_midi_note_on)
-		_midi_plugin.connect("midi_note_off", _on_android_midi_note_off)
-		_midi_plugin.connect("midi_device_connected", _on_android_midi_device_connected)
-		_midi_plugin.connect("midi_device_disconnected", _on_android_midi_device_disconnected)
-		_midi_plugin.open_midi_devices()
-		var devices = _midi_plugin.get_connected_devices()
-		if devices.size() > 0:
-			print("Android USB MIDI devices found: ", devices)
+	var on_android: bool = OS.get_name() == "Android"
+	print("=== Piano MIDI Init === platform:", OS.get_name())
+
+	if on_android:
+		if Engine.has_singleton("GodotMidiUSB"):
+			print("GodotMidiUSB plugin: LOADED")
+			_midi_plugin = Engine.get_singleton("GodotMidiUSB")
+			_midi_plugin.connect("midi_note_on", _on_android_midi_note_on)
+			_midi_plugin.connect("midi_note_off", _on_android_midi_note_off)
+			_midi_plugin.connect("midi_device_connected", _on_android_midi_device_connected)
+			_midi_plugin.connect("midi_device_disconnected", _on_android_midi_device_disconnected)
+			_midi_plugin.open_midi_devices()
+			var devices = _midi_plugin.get_connected_devices()
+			if devices.size() > 0:
+				print("Android USB MIDI devices found: ", devices)
+			else:
+				print("No USB MIDI device yet – plug in keyboard via Type-C/OTG.")
 		else:
-			print("No Android USB MIDI device found yet. Plug in a MIDI keyboard via Type-C/OTG.")
+			push_warning("GodotMidiUSB plugin NOT found on Android. Falling back to built-in MIDI.")
+			print("GodotMidiUSB plugin: NOT FOUND – trying OS.open_midi_inputs() as fallback")
+			OS.open_midi_inputs()
+			var midi_inputs := OS.get_connected_midi_inputs()
+			print("Built-in MIDI inputs: ", midi_inputs)
 	else:
 		# Desktop: use Godot built-in MIDI (ALSA / CoreMIDI / WinMM)
 		OS.open_midi_inputs()
@@ -111,19 +121,20 @@ func _input(event: InputEvent) -> void:
 # ── Android MIDI plugin callbacks ────────────────────────────────────────────
 
 func _on_android_midi_note_on(pitch: int, velocity: int) -> void:
-	if not Config.is_valid_midi_note(pitch):
-		return
-	var key_id := Config.midi_to_key_id(pitch)
+	var key_id := Config.midi_to_key_id_any_octave(pitch)
 	print("Android MIDI: NoteOn pitch=%d vel=%d -> key_id=%d" % [pitch, velocity, key_id])
+	if key_id < 0:
+		push_warning("Android MIDI: pitch %d cannot be mapped to any key" % pitch)
+		return
 	if key_id in key_nodes:
 		key_nodes[key_id].press()
 		key_pressed.emit(key_id)
 
 
 func _on_android_midi_note_off(pitch: int) -> void:
-	if not Config.is_valid_midi_note(pitch):
+	var key_id := Config.midi_to_key_id_any_octave(pitch)
+	if key_id < 0:
 		return
-	var key_id := Config.midi_to_key_id(pitch)
 	if key_id in key_nodes:
 		key_nodes[key_id].release()
 
@@ -137,15 +148,13 @@ func _on_android_midi_device_disconnected(device_name: String) -> void:
 
 
 func _handle_midi(event: InputEventMIDI) -> void:
+	var key_id := Config.midi_to_key_id_any_octave(event.pitch)
 	print("MIDI: note=%d message=%d velocity=%d -> key_id=%d" % [
-		event.pitch, event.message, event.velocity,
-		Config.midi_to_key_id(event.pitch)
+		event.pitch, event.message, event.velocity, key_id
 	])
 
-	if not Config.is_valid_midi_note(event.pitch):
+	if key_id < 0:
 		return
-
-	var key_id := Config.midi_to_key_id(event.pitch)
 
 	if event.message == MIDI_MESSAGE_NOTE_ON and event.velocity > 0:
 		if key_id in key_nodes:
@@ -161,7 +170,11 @@ func _handle_keyboard(event: InputEventKey) -> void:
 	if event.echo:
 		return
 
+	# On Android, physical_keycode can be 0 for USB/Bluetooth keyboards.
+	# Fall back to keycode so hardware keyboards always work.
 	var physical_key: int = event.physical_keycode
+	if physical_key == 0:
+		physical_key = event.keycode
 	if physical_key not in Config.KEYBOARD_TO_KEY_ID:
 		return
 

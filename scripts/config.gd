@@ -32,6 +32,21 @@ func is_valid_midi_note(midi_note: int) -> bool:
 	var key_id := midi_to_key_id(midi_note)
 	return key_id >= 0 and key_id < TOTAL_KEYS
 
+## Maps any MIDI pitch to a valid key_id (0-24) by octave-shifting.
+## Returns -1 only if the note cannot be mapped at all.
+## This lets keyboards on any octave setting play the piano correctly.
+func midi_to_key_id_any_octave(midi_note: int) -> int:
+	var key_id := midi_note - midi_base_note
+	# Shift up by octaves until >= 0
+	while key_id < 0:
+		key_id += 12
+	# Shift down by octaves until < TOTAL_KEYS
+	while key_id >= TOTAL_KEYS:
+		key_id -= 12
+	if key_id >= 0 and key_id < TOTAL_KEYS:
+		return key_id
+	return -1
+
 # ======================================================
 # --- Key Layout ---
 # ======================================================
