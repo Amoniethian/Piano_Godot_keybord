@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    USB device filter for MIDI keyboards.
+    USB MIDI devices use class 1 (Audio) with subclass 3 (MIDI Streaming).
+    Declaring an empty <usb-device/> entry allows ANY USB device to trigger
+    the USB_DEVICE_ATTACHED intent — the MIDI API then filters to MIDI-capable
+    devices. This prompts the system permission dialog the first time a USB
+    MIDI keyboard is plugged in so Android routes it to this app.
+-->
+<resources>
+    <!-- Match any USB MIDI device (class=1 Audio, subclass=3 MIDI Streaming) -->
+    <usb-device class="1" subclass="3" />
+    <!-- Also match class/subclass 0/0 for devices that report at interface level -->
+    <usb-device />
+</resources>

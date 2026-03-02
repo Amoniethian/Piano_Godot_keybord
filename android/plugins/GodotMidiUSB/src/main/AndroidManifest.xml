@@ -5,7 +5,26 @@
     <!-- Required for USB OTG / Type-C MIDI keyboard connectivity -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-    <!-- MIDI feature declaration (optional, for Google Play filtering) -->
+    <!-- MIDI feature declaration (for Google Play filtering) -->
     <uses-feature android:name="android.software.midi" android:required="false" />
+
+    <!--
+        Declare USB_DEVICE_ATTACHED intent on the main Godot activity so that:
+        1. Android shows a system permission dialog when a USB MIDI keyboard
+           is first plugged in, granting this app access to the USB device.
+        2. The Android MIDI service routes the device to this app even when it
+           was plugged in before the app was launched.
+        The usb_device_filter.xml restricts the intent to USB MIDI class devices.
+    -->
+    <application>
+        <activity android:name="com.godot.game.GodotApp">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/usb_device_filter" />
+        </activity>
+    </application>
 
 </manifest>

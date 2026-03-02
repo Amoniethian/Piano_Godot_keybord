@@ -275,3 +275,49 @@ MIDI 音高转 Key ID：`key_id = pitch - 48`（48 = C3 的 MIDI 编号）
 | `BLACK_KEY_WIDTH` | config.gd:120 | 44 | 黑键宽度 |
 | `BLACK_KEY_HEIGHT` | config.gd:121 | 185 | 黑键高度 |
 | `FADE_DURATION` | config.gd:127 | 4.0s | 按住键时音量渐弱时间 |
+
+---
+
+## 七、Android USB-C MIDI 键盘（AKAI LPK25）
+
+### MIDI 音符范围与八度校准
+
+本项目已针对 AKAI LPK25 配置。键盘默认音域：C4（MIDI 60）到 C6（MIDI 84），共 25 键。
+
+若按键完全无响应，请先确认键盘八度：LPK25 上有 OCT- / OCT+ 按钮。默认状态下 C4=60。
+若偏移，在 `scripts/config.gd` 中调整：
+
+```gdscript
+var midi_base_note: int = 60  # 若键盘显示偏低一格，改为 48；偏高一格改为 72
+```
+
+### 修改 Java 插件后必须重新编译 AAR
+
+> **每次修改 `android/plugins/GodotMidiUSB/src/` 下的 Java 源码后，
+> 必须重新编译 AAR，否则 APK 中仍是旧代码。**
+
+**Windows 快速重建：**
+
+```bat
+cd android
+plugins\rebuild_plugin.bat
+```
+
+**手动步骤：**
+
+```bat
+cd android
+gradlew.bat :plugins:GodotMidiUSB:assembleRelease
+copy plugins\GodotMidiUSB\build\outputs\aar\GodotMidiUSB-release.aar plugins\GodotMidiUSB-release.aar
+```
+
+完成后在 Godot 中重新导出 APK。
+
+### 首次连接授权流程
+
+1. 用 USB-C OTG 数据线连接 LPK25 到手机
+2. Android 系统弹窗：**"Piano Keyboard 是否可以访问 USB 设备？"**
+3. 勾选 **"始终允许此应用"** 并点确定
+4. App 自动打开 MIDI 端口并开始接收音符
+
+> 若无弹窗：请先打开 App，再插入键盘。
