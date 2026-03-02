@@ -20,15 +20,33 @@ var password_image_scene: PackedScene = preload("res://scenes/password_image.tsc
 # Setting password_solved = true disables the old sequence_detector routing.
 var password_solved: bool = true
 
+# Android MIDI plugin reference (null on desktop)
+var _midi_plugin = null
+
 
 func _ready() -> void:
-	# Open MIDI inputs
-	OS.open_midi_inputs()
-	var midi_inputs := OS.get_connected_midi_inputs()
-	if midi_inputs.size() > 0:
-		print("MIDI devices found: ", midi_inputs)
+	# ── MIDI initialisation ──────────────────────────────────────────────
+	if OS.get_name() == "Android" and Engine.has_singleton("GodotMidiUSB"):
+		# Android: use native USB MIDI plugin
+		_midi_plugin = Engine.get_singleton("GodotMidiUSB")
+		_midi_plugin.connect("midi_note_on", _on_android_midi_note_on)
+		_midi_plugin.connect("midi_note_off", _on_android_midi_note_off)
+		_midi_plugin.connect("midi_device_connected", _on_android_midi_device_connected)
+		_midi_plugin.connect("midi_device_disconnected", _on_android_midi_device_disconnected)
+		_midi_plugin.open_midi_devices()
+		var devices = _midi_plugin.get_connected_devices()
+		if devices.size() > 0:
+			print("Android USB MIDI devices found: ", devices)
+		else:
+			print("No Android USB MIDI device found yet. Plug in a MIDI keyboard via Type-C/OTG.")
 	else:
-		print("No MIDI device found. Using keyboard fallback (Z-M lower, Q-I upper).")
+		# Desktop: use Godot built-in MIDI (ALSA / CoreMIDI / WinMM)
+		OS.open_midi_inputs()
+		var midi_inputs := OS.get_connected_midi_inputs()
+		if midi_inputs.size() > 0:
+			print("MIDI devices found: ", midi_inputs)
+		else:
+			print("No MIDI device found. Using keyboard fallback (Z-M lower, Q-I upper).")
 
 	_create_piano_keys()
 	_register_all_keys()
@@ -74,7 +92,7 @@ func _register_all_keys() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Handle MIDI input
+	# Handle MIDI input (desktop only; Android uses plugin callbacks)
 	if event is InputEventMIDI:
 		_handle_midi(event)
 		return
@@ -82,6 +100,34 @@ func _input(event: InputEvent) -> void:
 	# Keyboard fallback
 	if event is InputEventKey:
 		_handle_keyboard(event)
+
+
+# ── Android MIDI plugin callbacks ────────────────────────────────────────────
+
+func _on_android_midi_note_on(pitch: int, velocity: int) -> void:
+	if not Config.is_valid_midi_note(pitch):
+		return
+	var key_id := Config.midi_to_key_id(pitch)
+	print("Android MIDI: NoteOn pitch=%d vel=%d -> key_id=%d" % [pitch, velocity, key_id])
+	if key_id in key_nodes:
+		key_nodes[key_id].press()
+		key_pressed.emit(key_id)
+
+
+func _on_android_midi_note_off(pitch: int) -> void:
+	if not Config.is_valid_midi_note(pitch):
+		return
+	var key_id := Config.midi_to_key_id(pitch)
+	if key_id in key_nodes:
+		key_nodes[key_id].release()
+
+
+func _on_android_midi_device_connected(device_name: String) -> void:
+	print("Android USB MIDI connected: ", device_name)
+
+
+func _on_android_midi_device_disconnected(device_name: String) -> void:
+	print("Android USB MIDI disconnected: ", device_name)
 
 
 func _handle_midi(event: InputEventMIDI) -> void:
