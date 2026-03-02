@@ -9,3 +9,6 @@ android/plugins/*/build/
 
 # Local config
 local.properties
+
+# Godot engine AAR (large binary, download manually from Godot releases)
+android/libs/godot-lib*.aar
