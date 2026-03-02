@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.piano.godot.midi">
+
+    <!-- Required for USB OTG / Type-C MIDI keyboard connectivity -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!-- MIDI feature declaration (optional, for Google Play filtering) -->
+    <uses-feature android:name="android.software.midi" android:required="false" />
+
+</manifest>
