@@ -23,7 +23,7 @@ const TOTAL_KEYS: int = 25
 # ======================================================
 # Base MIDI note number for the lowest key on your MIDI keyboard.
 # AKAI LPK25 with octave+1: C4 = MIDI 60. Adjust if octave is shifted.
-var midi_base_note: int = 60
+var midi_base_note: int = 48
 
 func midi_to_key_id(midi_note: int) -> int:
 	return midi_note - midi_base_note
