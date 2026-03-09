@@ -8,12 +8,12 @@ extends Node
 ## star_note16 ambient groups, level sequences, chords, dialogue — see below.
 
 # ======================================================
-# --- Note Definitions (25 keys: C4 to C6) ---
+# --- Note Definitions (25 keys: C3 to C5, matching AKAI LPK25 OCT 0) ---
 # ======================================================
 const NOTE_NAMES: Array[String] = [
-	"C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4",
-	"G#4", "A4", "A#4", "B4", "C5", "C#5", "D5", "D#5",
-	"E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5", "C6"
+	"C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3",
+	"G#3", "A3", "A#3", "B3", "C4", "C#4", "D4", "D#4",
+	"E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4", "C5"
 ]
 
 const TOTAL_KEYS: int = 25
@@ -22,7 +22,7 @@ const TOTAL_KEYS: int = 25
 # --- MIDI Mapping ---
 # ======================================================
 # Base MIDI note number for the lowest key on your MIDI keyboard.
-# AKAI LPK25 with octave+1: C4 = MIDI 60. Adjust if octave is shifted.
+# AKAI LPK25 at OCT 0: C3 = MIDI 48. Labels on keys match keyboard exactly.
 var midi_base_note: int = 48
 
 func midi_to_key_id(midi_note: int) -> int:
@@ -135,12 +135,12 @@ func _find_audio_file(base_path: String) -> String:
 # The password is a sequence of key_ids the player must play in order.
 #
 # Key ID reference (for easy password editing):
-#   0=C4   1=C#4  2=D4   3=D#4  4=E4   5=F4   6=F#4
-#   7=G4   8=G#4  9=A4  10=A#4 11=B4  12=C5  13=C#5
-#  14=D5  15=D#5 16=E5  17=F5  18=F#5 19=G5  20=G#5
-#  21=A5  22=A#5 23=B5  24=C6
+#   0=C3   1=C#3  2=D3   3=D#3  4=E3   5=F3   6=F#3
+#   7=G3   8=G#3  9=A3  10=A#3 11=B3  12=C4  13=C#4
+#  14=D4  15=D#4 16=E4  17=F4  18=F#4 19=G4  20=G#4
+#  21=A4  22=A#4 23=B4  24=C5
 #
-# Current password: D#4 D4 E4 C4 C4 D4 A4 F5 B4
+# Current password: D#3 D3 E3 C3 C3 D3 A3 F4 B3
 var password_sequence: Array[int] = [3, 2, 4, 0, 0, 2, 9, 17, 11]
 
 # Password images directory
@@ -195,9 +195,9 @@ const STAR_NOTE_GROUPS: Array = [
 
 # Level sequences: Level 1 = 6 notes, Level 2 = 9, Level 3 = 9
 const LEVEL_SEQUENCES: Array = [
-	[0, 4, 7, 5, 4, 2],               # Level 1: C4 E4 G4 F4 E4 D4
+	[0, 4, 7, 5, 4, 2],               # Level 1: C3 E3 G3 F3 E3 D3
 	[0, 2, 4, 5, 7, 9, 11, 12, 14],   # Level 2: ascending C major scale
-	[3, 2, 4, 0, 0, 2, 9, 17, 11],    # Level 3: D#4 D4 E4 C4 C4 D4 A4 F5 B4
+	[3, 2, 4, 0, 0, 2, 9, 17, 11],    # Level 3: D#3 D3 E3 C3 C3 D3 A3 F4 B3
 ]
 
 # Chord definitions (key_ids pressed simultaneously)
