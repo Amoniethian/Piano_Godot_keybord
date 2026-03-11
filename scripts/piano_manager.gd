@@ -36,12 +36,18 @@ var _midi_warning_active: bool = false
 var _warning_label: Label    = null
 var _warning_tween: Tween    = null
 
+# ── Screen flash feedback ─────────────────────────────────────────────────────
+var _flash_canvas: CanvasLayer = null
+var _flash_rect: ColorRect     = null
+var _flash_tween: Tween        = null
+
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
 	_setup_debug_label()
 	_setup_warning_label()
+	_setup_flash_overlay()
 	_init_midi()
 	_create_piano_keys()
 	_register_all_keys()
@@ -117,6 +123,31 @@ func _clear_midi_warning() -> void:
 	if teacher:
 		teacher.resume_after_warning()
 	_dbg("MIDI: device reconnected")
+
+
+func _setup_flash_overlay() -> void:
+	_flash_canvas = CanvasLayer.new()
+	_flash_canvas.layer = 10        # above game, below video overlay
+	add_child(_flash_canvas)
+	_flash_rect = ColorRect.new()
+	_flash_rect.anchor_right  = 1.0
+	_flash_rect.anchor_bottom = 1.0
+	_flash_rect.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_flash_rect.grow_vertical   = Control.GROW_DIRECTION_BOTH
+	_flash_rect.color        = Color(0, 0, 0, 0)
+	_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash_canvas.add_child(_flash_rect)
+
+
+## Flash the screen with `color` (alpha 0.35) fading to transparent over 0.3 s.
+func flash_screen(color: Color) -> void:
+	if not _flash_rect:
+		return
+	if _flash_tween:
+		_flash_tween.kill()
+	_flash_rect.color = Color(color.r, color.g, color.b, 0.35)
+	_flash_tween = create_tween()
+	_flash_tween.tween_property(_flash_rect, "color:a", 0.0, 0.3)
 
 
 func _setup_debug_label() -> void:

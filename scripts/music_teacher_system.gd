@@ -211,6 +211,7 @@ func _record_player_note(key_id: int) -> void:
 		return
 
 	player_input.append(key_id)
+	piano_manager.flash_screen(Color(1.0, 0.8, 0.0))  # gold — correct note
 
 	if player_input.size() >= sequence.size():
 		_cancel_input_timeout()
@@ -225,6 +226,7 @@ func _record_player_note(key_id: int) -> void:
 func _trigger_failure() -> void:
 	if current_state == State.FAILURE:
 		return
+	piano_manager.flash_screen(Color(1.0, 0.1, 0.1))  # red — wrong note
 	_cancel_input_timeout()
 	demo_cancel_flag = true
 	current_demo_note = -1
