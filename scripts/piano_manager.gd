@@ -49,7 +49,7 @@ func _setup_debug_label() -> void:
 	_debug_label.size        = Vector2(1260, 55)
 	_debug_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_debug_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	_debug_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.2))
+	_debug_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_debug_label.add_theme_font_size_override("font_size", 15)
 	add_child(_debug_label)
 	_dbg("MIDI: starting up…")

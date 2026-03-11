@@ -43,12 +43,12 @@ script = ExtResource("5_music_teacher")
 
 [node name="DialogueLabel" type="Label" parent="PianoManager"]
 visible = false
-offset_top = -130.0
-offset_right = 1260.0
-offset_bottom = -60.0
-theme_override_colors/font_color = Color(1, 1, 0.8, 1)
+offset_top = -170.0
+offset_right = 1245.0
+offset_bottom = -10.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = SubResource("SystemFont_bold")
-theme_override_font_sizes/font_size = 66
+theme_override_font_sizes/font_size = 32
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
