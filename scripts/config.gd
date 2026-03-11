@@ -193,11 +193,11 @@ const STAR_NOTE_GROUPS: Array = [
 	[4, 7, 12],   # E4-G4-C5  (rising skip)
 ]
 
-# Level sequences: Level 1 = 6 notes, Level 2 = 9, Level 3 = 9
+# Level sequences: Level 1 = 6 notes, Level 2 = 9, Level 3 = 6
 const LEVEL_SEQUENCES: Array = [
 	[0, 4, 7, 5, 4, 2],               # Level 1: C3 E3 G3 F3 E3 D3
 	[0, 2, 4, 5, 7, 9, 11, 12, 14],   # Level 2: ascending C major scale
-	[3, 2, 4, 0, 0, 2, 9, 17, 11],    # Level 3: D#3 D3 E3 C3 C3 D3 A3 F4 B3
+	[5, 6, 7, 5, 4, 2],               # Level 3: F3 F#3 G3 F3 E3 D3 (one black key)
 ]
 
 # Chord definitions (key_ids pressed simultaneously)
@@ -222,8 +222,8 @@ const VOICE_INTRO_AUDIO:        String = "res://audio/voice/intro_listen.wav"
 const VOICE_DIALOGUE_AUDIO_FMT: String = "res://audio/voice/dialogue_%02d.wav"
 
 # Timing constants
-const DEMO_NOTE_INTERVAL:        float = 0.5    # seconds between each demo note
-const DEMO_NOTE_HOLD:            float = 0.3    # seconds each demo note is held down
+const DEMO_NOTE_INTERVAL:        float = 0.85   # seconds between each demo note
+const DEMO_NOTE_HOLD:            float = 0.5    # seconds each demo note is held down
 const STAR_NOTE_INTERVAL:        float = 2.0    # seconds between ambient note groups
 const STAR_NOTE_HOLD:            float = 0.25   # seconds each ambient note held
 const VOICE_INTERVAL_MIN:        float = 10.0   # min seconds between dialogue lines
