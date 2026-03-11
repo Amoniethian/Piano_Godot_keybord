@@ -7,7 +7,7 @@ extends Node
 ##                  any key press → DEMONSTRATION
 ##   DEMONSTRATION → chord + voice + note-by-note demo playback
 ##                  press sequence[0] → PLAYER_INPUT (demo cancelled, first note counted)
-##                  press wrong key → FAILURE
+##                  press wrong key → silently ignored during demo
 ##                  demo finishes → PLAYER_INPUT
 ##   PLAYER_INPUT  → player repeats the sequence; 2s timeout per note
 ##                  wrong note or timeout → FAILURE
@@ -33,6 +33,7 @@ var level3_play_order: Array[int] = []
 var shuffled_groups: Array = []
 var ambient_group_index: int = 0
 var ambient_active: bool = false    # set false to stop ambient loop
+var _ambient_gen: int = 0           # incremented on each stop to invalidate old coroutines
 
 # ── Dialogue cycling ───────────────────────────────────────────────────────────
 var _dialogue_index: int = -1
@@ -61,14 +62,16 @@ func _ready() -> void:
 # ── Ambient ───────────────────────────────────────────────────────────────────
 
 func _start_ambient() -> void:
+	_stop_ambient()              # bump _ambient_gen so any stale coroutines exit
 	ambient_active = true
 	_reshuffle_groups()
-	_run_ambient_loop()
-	_run_dialogue_loop()
+	_run_ambient_loop(_ambient_gen)
+	_run_dialogue_loop(_ambient_gen)
 
 
 func _stop_ambient() -> void:
 	ambient_active = false
+	_ambient_gen += 1
 
 
 func _reshuffle_groups() -> void:
@@ -77,10 +80,10 @@ func _reshuffle_groups() -> void:
 	ambient_group_index = 0
 
 
-func _run_ambient_loop() -> void:
-	while ambient_active:
+func _run_ambient_loop(gen: int) -> void:
+	while ambient_active and _ambient_gen == gen:
 		await get_tree().create_timer(Config.STAR_NOTE_INTERVAL).timeout
-		if not ambient_active:
+		if not ambient_active or _ambient_gen != gen:
 			break
 		await _play_ambient_group()
 		ambient_group_index = (ambient_group_index + 1) % shuffled_groups.size()
@@ -99,14 +102,14 @@ func _play_ambient_group() -> void:
 			piano_manager.key_nodes[key_id].release()
 
 
-func _run_dialogue_loop() -> void:
+func _run_dialogue_loop(gen: int) -> void:
 	await get_tree().create_timer(2.0).timeout  # brief startup delay
-	while ambient_active:
+	while ambient_active and _ambient_gen == gen:
 		_dialogue_index = (_dialogue_index + 1) % Config.TEACHER_DIALOGUE.size()
 		_show_dialogue(Config.TEACHER_DIALOGUE[_dialogue_index])
 		_try_play_voice_audio(Config.VOICE_AUDIO_DIR + "dialogue_%02d.wav" % [_dialogue_index + 1])
 		await get_tree().create_timer(Config.DIALOGUE_DISPLAY_DURATION).timeout
-		if not ambient_active:
+		if not ambient_active or _ambient_gen != gen:
 			break
 		_hide_dialogue()
 		await get_tree().create_timer(1.0).timeout  # short gap between lines
@@ -121,7 +124,7 @@ func _on_key_pressed(key_id: int) -> void:
 		State.DEMONSTRATION:
 			var sequence: Array = Config.LEVEL_SEQUENCES[current_level]
 			if key_id == sequence[0]:
-				# Player starts the correct sequence early — cancel demo and let them play
+				# Player jumps in on the correct first note — cancel demo and play
 				demo_cancel_flag = true
 				if current_demo_note != -1 and current_demo_note in piano_manager.key_nodes:
 					piano_manager.key_nodes[current_demo_note].release()
@@ -131,8 +134,7 @@ func _on_key_pressed(key_id: int) -> void:
 				player_input.clear()
 				player_input.append(key_id)
 				_start_input_timeout()
-			else:
-				_trigger_failure()
+			# Wrong key during demo is silently ignored — failure only in PLAYER_INPUT
 		State.PLAYER_INPUT:
 			_record_player_note(key_id)
 
@@ -209,6 +211,7 @@ func _record_player_note(key_id: int) -> void:
 		return
 
 	player_input.append(key_id)
+	piano_manager.flash_screen(Color(1.0, 0.8, 0.0))  # gold — correct note
 
 	if player_input.size() >= sequence.size():
 		_cancel_input_timeout()
@@ -223,6 +226,7 @@ func _record_player_note(key_id: int) -> void:
 func _trigger_failure() -> void:
 	if current_state == State.FAILURE:
 		return
+	piano_manager.flash_screen(Color(1.0, 0.1, 0.1))  # red — wrong note
 	_cancel_input_timeout()
 	demo_cancel_flag = true
 	current_demo_note = -1
@@ -260,6 +264,24 @@ func _trigger_success() -> void:
 func _begin_final_reveal() -> void:
 	current_state = State.FINAL_REVEAL
 	piano_manager.reveal_final_images(Config.LEVEL_SEQUENCES[2], level3_play_order)
+
+
+# ── Warning pause/resume (called by PianoManager on MIDI device loss) ─────────
+
+func pause_for_warning() -> void:
+	_stop_ambient()          # increments _ambient_gen; loops exit on next timer tick
+	demo_cancel_flag = true  # kills any running demonstration coroutine
+	_cancel_input_timeout()
+	_release_all_keys()
+	_hide_dialogue()
+
+
+func resume_after_warning() -> void:
+	demo_cancel_flag = false
+	if current_state == State.AMBIENT:
+		_start_ambient()
+	else:
+		_begin_level()  # restart current level's demonstration
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
