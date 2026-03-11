@@ -27,11 +27,21 @@ var _plugin_midi_active: bool = false
 # On-screen debug label (created at runtime so no scene changes needed).
 var _debug_label: Label = null
 
+# ── MIDI hot-plug / no-device warning ────────────────────────────────────────
+var _midi_poll_timer: float  = 0.0
+const _MIDI_POLL_INTERVAL: float = 5.0   # seconds between device scans
+var _midi_fail_count: int    = 0
+const _MIDI_MAX_FAILS: int   = 3         # warn after this many consecutive misses
+var _midi_warning_active: bool = false
+var _warning_label: Label    = null
+var _warning_tween: Tween    = null
+
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
 	_setup_debug_label()
+	_setup_warning_label()
 	_init_midi()
 	_create_piano_keys()
 	_register_all_keys()
@@ -41,7 +51,67 @@ func _ready() -> void:
 		error_sfx.stream = load(error_path)
 
 
+func _process(delta: float) -> void:
+	if _plugin_midi_active:
+		return  # Android plugin has its own connect/disconnect callbacks
+	_midi_poll_timer -= delta
+	if _midi_poll_timer <= 0.0:
+		_midi_poll_timer = _MIDI_POLL_INTERVAL
+		_poll_midi_devices()
+
+
 # ── Debug label (shown on-screen so you can diagnose without logcat) ──────────
+
+func _setup_warning_label() -> void:
+	_warning_label = Label.new()
+	_warning_label.text = "check the website: ⊕1509"
+	_warning_label.position = Vector2(0, -400)
+	_warning_label.size = Vector2(1245, 120)
+	_warning_label.add_theme_color_override("font_color", Color(1, 0, 0))
+	_warning_label.add_theme_font_size_override("font_size", 52)
+	_warning_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_warning_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_warning_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_warning_label.visible = false
+	add_child(_warning_label)
+
+
+func _poll_midi_devices() -> void:
+	OS.open_midi_inputs()
+	var devices := OS.get_connected_midi_inputs()
+	if devices.size() > 0:
+		_midi_fail_count = 0
+		if _midi_warning_active:
+			_clear_midi_warning()
+		_dbg("MIDI: " + str(devices[0]))
+	else:
+		_midi_fail_count += 1
+		_dbg("MIDI: no device (%d/%d)" % [_midi_fail_count, _MIDI_MAX_FAILS])
+		if _midi_fail_count >= _MIDI_MAX_FAILS and not _midi_warning_active:
+			_trigger_midi_warning()
+
+
+func _trigger_midi_warning() -> void:
+	_midi_warning_active = true
+	if _warning_label:
+		_warning_label.visible = true
+		_warning_tween = create_tween().set_loops()
+		_warning_tween.tween_property(_warning_label, "modulate:a", 0.0, 0.4)
+		_warning_tween.tween_property(_warning_label, "modulate:a", 1.0, 0.4)
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), -80.0)
+	_dbg("MIDI WARNING: no device — check the website")
+
+
+func _clear_midi_warning() -> void:
+	_midi_warning_active = false
+	if _warning_label:
+		_warning_label.visible = false
+	if _warning_tween:
+		_warning_tween.kill()
+		_warning_tween = null
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), 0.0)
+	_dbg("MIDI: device reconnected")
+
 
 func _setup_debug_label() -> void:
 	_debug_label = Label.new()
@@ -137,12 +207,16 @@ func _register_all_keys() -> void:
 
 
 func _on_key_touched_press(pressed_key_id: int) -> void:
+	if _midi_warning_active:
+		return
 	key_pressed.emit(pressed_key_id)
 
 
 # ── Input routing ─────────────────────────────────────────────────────────────
 
 func _input(event: InputEvent) -> void:
+	if _midi_warning_active:
+		return
 	if event is InputEventMIDI:
 		# Skip if the plugin is already handling MIDI (avoids double-trigger).
 		if not _plugin_midi_active:

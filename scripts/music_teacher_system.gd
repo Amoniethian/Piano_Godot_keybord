@@ -34,6 +34,9 @@ var shuffled_groups: Array = []
 var ambient_group_index: int = 0
 var ambient_active: bool = false    # set false to stop ambient loop
 
+# ── Dialogue cycling ───────────────────────────────────────────────────────────
+var _dialogue_index: int = -1
+
 # ── Demo cancellation ─────────────────────────────────────────────────────────
 # Coroutines (_begin_level, _play_demonstration) check this flag at each await.
 var demo_cancel_flag: bool = false
@@ -61,7 +64,7 @@ func _start_ambient() -> void:
 	ambient_active = true
 	_reshuffle_groups()
 	_run_ambient_loop()
-	_schedule_voice_line()
+	_run_dialogue_loop()
 
 
 func _stop_ambient() -> void:
@@ -96,22 +99,17 @@ func _play_ambient_group() -> void:
 			piano_manager.key_nodes[key_id].release()
 
 
-func _schedule_voice_line() -> void:
-	var delay: float = randf_range(Config.VOICE_INTERVAL_MIN, Config.VOICE_INTERVAL_MAX)
-	await get_tree().create_timer(delay).timeout
-	if current_state == State.AMBIENT:
-		_show_random_dialogue()
-		# Auto-hide after display duration
+func _run_dialogue_loop() -> void:
+	await get_tree().create_timer(2.0).timeout  # brief startup delay
+	while ambient_active:
+		_dialogue_index = (_dialogue_index + 1) % Config.TEACHER_DIALOGUE.size()
+		_show_dialogue(Config.TEACHER_DIALOGUE[_dialogue_index])
+		_try_play_voice_audio(Config.VOICE_AUDIO_DIR + "dialogue_%02d.wav" % [_dialogue_index + 1])
 		await get_tree().create_timer(Config.DIALOGUE_DISPLAY_DURATION).timeout
-		if current_state == State.AMBIENT:
-			_hide_dialogue()
-		_schedule_voice_line()
-
-
-func _show_random_dialogue() -> void:
-	var idx: int = randi() % Config.TEACHER_DIALOGUE.size()
-	_show_dialogue(Config.TEACHER_DIALOGUE[idx])
-	_try_play_voice_audio(Config.VOICE_AUDIO_DIR + "dialogue_%02d.wav" % (idx + 1))
+		if not ambient_active:
+			break
+		_hide_dialogue()
+		await get_tree().create_timer(1.0).timeout  # short gap between lines
 
 
 # ── Key Input Routing ─────────────────────────────────────────────────────────
