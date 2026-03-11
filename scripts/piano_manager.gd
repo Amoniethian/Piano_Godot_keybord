@@ -272,64 +272,33 @@ func _spawn_password_circle(key_id: int) -> void:
 
 # ── Music Teacher System: final reveal ────────────────────────────────────────
 
-func reveal_final_images(sequence: Array, play_order: Array) -> void:
-	var unique_keys: Array = []
-	var seen: Dictionary = {}
-	for k in sequence:
-		if k not in seen:
-			seen[k] = true
-			unique_keys.append(k)
-	unique_keys.sort()
-
-	var circle_map: Dictionary = {}
-	for i in range(unique_keys.size()):
-		var key_id: int = unique_keys[i]
-		var delay: float = i * Config.PASSWORD_REVEAL_DELAY
-		get_tree().create_timer(delay).timeout.connect(
-			func(): _spawn_and_store_circle(key_id, circle_map)
-		)
-
-	var total_delay: float = unique_keys.size() * Config.PASSWORD_REVEAL_DELAY + 1.0
-	get_tree().create_timer(total_delay).timeout.connect(
-		func(): _rearrange_circles(circle_map, play_order)
-	)
-
-
-func _spawn_and_store_circle(key_id: int, circle_map: Dictionary) -> void:
-	if key_id not in key_nodes:
-		return
-	var key_node = key_nodes[key_id]
-	var circle = password_image_scene.instantiate()
-	var circle_size := Vector2(50, 50)
-	circle.position = key_node.position + Vector2(
-		(key_node.size.x - circle_size.x) / 2.0,
-		-circle_size.y - 10
-	)
-	password_images_container.add_child(circle)
-	circle.reveal()
-	circle_map[key_id] = circle
-
-
-func _rearrange_circles(circle_map: Dictionary, play_order: Array) -> void:
-	var ordered: Array = []
-	var seen: Dictionary = {}
-	for k in play_order:
-		if k not in seen and k in circle_map:
-			seen[k] = true
-			ordered.append(k)
-
-	var n: int = ordered.size()
-	if n == 0:
-		return
-
-	var circle_y: float = -60.0
+func reveal_final_images(_sequence: Array, _play_order: Array) -> void:
 	var piano_width: float = 15.0 * (Config.WHITE_KEY_WIDTH + Config.KEY_GAP)
-	var spacing: float = piano_width / float(max(n - 1, 1))
 
-	for i in range(n):
-		var key_id: int = ordered[i]
-		var target := Vector2(i * spacing, circle_y)
-		circle_map[key_id].animate_to(target)
+	var symbol_label := Label.new()
+	symbol_label.text = "⊕"
+	symbol_label.add_theme_font_size_override("font_size", 200)
+	symbol_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	symbol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	symbol_label.size = Vector2(piano_width, 230)
+	symbol_label.position = Vector2(0, -450)
+	symbol_label.modulate.a = 0.0
+	password_images_container.add_child(symbol_label)
+
+	var code_label := Label.new()
+	code_label.text = "1509"
+	code_label.add_theme_font_size_override("font_size", 200)
+	code_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	code_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	code_label.size = Vector2(piano_width, 230)
+	code_label.position = Vector2(0, -210)
+	code_label.modulate.a = 0.0
+	password_images_container.add_child(code_label)
+
+	var tween := create_tween()
+	tween.tween_property(symbol_label, "modulate:a", 1.0, 1.5)
+	tween.tween_interval(0.3)
+	tween.tween_property(code_label, "modulate:a", 1.0, 1.5)
 
 
 func fade_out_all_keys() -> void:
