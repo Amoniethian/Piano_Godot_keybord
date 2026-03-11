@@ -1,4 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://dpjebeum7e8h8"]
+[gd_scene load_steps=7 format=3 uid="uid://dpjebeum7e8h8"]
+
+[sub_resource type="SystemFont" id="SystemFont_bold"]
+font_names = PackedStringArray("Arial", "Helvetica Neue", "Helvetica", "sans-serif")
+font_weight = 700
 
 [ext_resource type="Script" uid="uid://c47l1fyuh0q4w" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" uid="uid://dugjq78t6yphf" path="res://scripts/piano_manager.gd" id="2_piano_mgr"]
@@ -43,7 +47,8 @@ offset_top = -130.0
 offset_right = 1260.0
 offset_bottom = -60.0
 theme_override_colors/font_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_fonts/font = SubResource("SystemFont_bold")
+theme_override_font_sizes/font_size = 66
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
