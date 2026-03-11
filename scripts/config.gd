@@ -193,11 +193,11 @@ const STAR_NOTE_GROUPS: Array = [
 	[4, 7, 12],   # E4-G4-C5  (rising skip)
 ]
 
-# Level sequences: Level 1 = 6 notes, Level 2 = 9, Level 3 = 9
+# Level sequences: Level 1 = 6 notes, Level 2 = 9, Level 3 = 6
 const LEVEL_SEQUENCES: Array = [
 	[0, 4, 7, 5, 4, 2],               # Level 1: C3 E3 G3 F3 E3 D3
 	[0, 2, 4, 5, 7, 9, 11, 12, 14],   # Level 2: ascending C major scale
-	[0, 2, 4, 5, 7, 5],               # Level 3: C3 D3 E3 F3 G3 F3 (white keys only)
+	[5, 6, 7, 5, 4, 2],               # Level 3: F3 F#3 G3 F3 E3 D3 (one black key)
 ]
 
 # Chord definitions (key_ids pressed simultaneously)
