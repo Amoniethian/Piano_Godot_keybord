@@ -93,6 +93,9 @@ func _poll_midi_devices() -> void:
 
 func _trigger_midi_warning() -> void:
 	_midi_warning_active = true
+	var teacher := get_node_or_null("MusicTeacherSystem")
+	if teacher:
+		teacher.pause_for_warning()
 	if _warning_label:
 		_warning_label.visible = true
 		_warning_tween = create_tween().set_loops()
@@ -110,6 +113,9 @@ func _clear_midi_warning() -> void:
 		_warning_tween.kill()
 		_warning_tween = null
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), 0.0)
+	var teacher := get_node_or_null("MusicTeacherSystem")
+	if teacher:
+		teacher.resume_after_warning()
 	_dbg("MIDI: device reconnected")
 
 
