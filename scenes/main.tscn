@@ -1,14 +1,14 @@
 [gd_scene load_steps=7 format=3 uid="uid://dpjebeum7e8h8"]
 
-[sub_resource type="SystemFont" id="SystemFont_bold"]
-font_names = PackedStringArray("Arial", "Helvetica Neue", "Helvetica", "sans-serif")
-font_weight = 700
-
 [ext_resource type="Script" uid="uid://c47l1fyuh0q4w" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" uid="uid://dugjq78t6yphf" path="res://scripts/piano_manager.gd" id="2_piano_mgr"]
 [ext_resource type="Script" uid="uid://tunrg36jx4fd" path="res://scripts/sequence_detector.gd" id="3_seq_detect"]
 [ext_resource type="Script" uid="uid://bb0wi5p351n3y" path="res://scripts/video_player_overlay.gd" id="4_video_ovl"]
 [ext_resource type="Script" uid="uid://sq6wtgxye1d8" path="res://scripts/music_teacher_system.gd" id="5_music_teacher"]
+
+[sub_resource type="SystemFont" id="SystemFont_bold"]
+font_names = PackedStringArray("Arial", "Helvetica Neue", "Helvetica", "sans-serif")
+font_weight = 700
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
